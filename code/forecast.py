@@ -79,16 +79,22 @@ class Forecaster:
         candidates = []
         seen = set()
         for evt in events:
-            if evt.direction != "debit" or evt.flexibility != "flexible":
+            if evt.direction != "debit":
                 continue
             if evt.category in self.profile.expense_categories_to_protect:
                 continue
             if evt.event_id in seen:
                 continue
             seen.add(evt.event_id)
-            if evt.category in self.profile.expense_categories_user_is_willing_to_stop:
+            if evt.category in self.profile.expense_categories_user_is_willing_to_stop and evt.flexibility in {
+                "stoppable",
+                "reducible_or_stoppable",
+            }:
                 candidates.append({"kind": "stop", "event_id": evt.event_id})
-            if evt.category in self.profile.expense_categories_user_is_willing_to_reduce:
+            if evt.category in self.profile.expense_categories_user_is_willing_to_reduce and evt.flexibility in {
+                "reducible",
+                "reducible_or_stoppable",
+            }:
                 min_allowed = evt.minimum_allowed_amount
                 if min_allowed is None:
                     min_allowed = (evt.amount * Decimal("0.7")).quantize(Decimal("0.01"))
@@ -151,10 +157,12 @@ class Forecaster:
         return None
 
     def evaluate(self, request_date: date, requested_amount: Decimal) -> ForecastResult:
+        safe_now_no_changes, _ = self.simulate(request_date, [(request_date, requested_amount)], [])
         amount_safe_to_pay, projected_min = self._max_safe_now(request_date, requested_amount)
+        if safe_now_no_changes:
+            amount_safe_to_pay = requested_amount
         earliest = self._find_earliest_full_payment_date(request_date, requested_amount)
 
-        safe_now_no_changes, _ = self.simulate(request_date, [(request_date, requested_amount)], [])
         changes = []
         safe_now_with_changes = safe_now_no_changes
         if not safe_now_no_changes:

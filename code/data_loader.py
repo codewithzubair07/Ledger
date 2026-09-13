@@ -91,7 +91,7 @@ class DataLoader:
             row["request_date_obj"] = _parse_date(row["request_date"])
             row["desired_completion_date_obj"] = _parse_date(row["desired_completion_date"])
             row["requested_amount_decimal"] = _parse_decimal(row["requested_amount"]) or Decimal("0")
-            row["allows_partial_payment_bool"] = row["allows_partial_payment"].strip().lower() == "yes"
+            row["allows_partial_payment_bool"] = row["allows_partial_payment"].strip().lower() == "true"
 
         for row in events:
             row["event_date_obj"] = _parse_date(row["event_date"])
